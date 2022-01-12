@@ -5,7 +5,7 @@ class JSXNodeElement extends JSXNode {
   final Map<String, String> attributes = {};
 
   JSXNodeElement(String localName,
-      {List<JSXNode> nodes, Map<String, String> attributes}) {
+      {List<JSXNode>? nodes, Map<String, String>? attributes}) {
     this.tag = localName;
     if (nodes != null && nodes.isNotEmpty) {
       for (JSXNode node in nodes) {
@@ -19,8 +19,8 @@ class JSXNodeElement extends JSXNode {
   }
 
   @override
-  addNode(JSXNode node) {
-    nodes.add(node);
+  addNode(JSXNode? node) {
+    nodes.add(node!);
     node.parentNode = this;
   }
 

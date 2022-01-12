@@ -29,17 +29,18 @@ class JSXParser {
 
   @visibleForTesting
   static extractParameters(JSXNodeElement node, String content) {
-    List<Match> matches = regExpAttr.allMatches(content).toList();
+    List<Match>? matches = regExpAttr.allMatches(content).toList();
 
     if (matches != null && node != null) {
-      for (RegExpMatch match in matches) {
+      for (int i = 0; i < matches.length; i++) {
+        Match match = matches[i];
         String name = match.group(1) ?? '',
             value = (match.group(4) ?? '') + (match.group(6) ?? '');
 
         if (name.isNotEmpty) {
           node.attributes[name] =
               value.replaceAllMapped(RegExp(r'\\(.)'), (match) {
-            return match.group(1);
+            return match.group(1) ?? '';
           });
         }
       }
@@ -49,42 +50,42 @@ class JSXParser {
   }
 
   @visibleForTesting
-  static List<String> getFirstHtmlElements(String html) {
+  static List<String>? getFirstHtmlElements(String? html) {
     if (html == null) {
       return null;
     }
 
-    RegExpMatch match = regExpHtml.firstMatch(html);
-
-    return [
-      //fullMatch
-      match.group(0) ?? '',
-      //beforeText
-      match.group(1) ?? '',
-      //has html tag
-      (match.group(2)?.isEmpty ?? true) ? '' : '<',
-      //closing tag
-      match.group(3) ?? '',
-      //tag name
-      match.group(4) ?? '',
-      //attributes
-      match.group(5) ?? '',
-      //self-closing tag
-      match.group(12) ?? ''
-    ];
+    RegExpMatch? match = regExpHtml.firstMatch(html);
+    if (match != null)
+      return [
+        //fullMatch
+        match.group(0) ?? '',
+        //beforeText
+        match.group(1) ?? '',
+        //has html tag
+        (match.group(2)?.isEmpty ?? true) ? '' : '<',
+        //closing tag
+        match.group(3) ?? '',
+        //tag name
+        match.group(4) ?? '',
+        //attributes
+        match.group(5) ?? '',
+        //self-closing tag
+        match.group(12) ?? ''
+      ];
   }
 
-  static parse(String html) {
+  static parse(String? html) {
     int deepLevel = 0;
     String literalContent = '';
 
-    _processTree({JSXNode localNode}) {
-      if (html.isEmpty) {
+    _processTree({JSXNode? localNode}) {
+      if (html != null && html!.isEmpty && localNode != null) {
         localNode.addNode(JSXNodeText(''));
       }
 
-      List<String> match;
-      String fullMatch,
+      List<String>? match;
+      String? fullMatch,
           beforeText,
           hasTag,
           tagName,
@@ -100,7 +101,7 @@ class JSXParser {
 
           if (fullMatch.isNotEmpty) {
             // erase what was already done
-            html = html.replaceFirst(fullMatch, '');
+            if (html != null) html = html!.replaceFirst(fullMatch, '');
 
             beforeText = match[1];
             hasTag = match[2];
@@ -112,7 +113,8 @@ class JSXParser {
             bool processNode = true;
 
             // if this element is literal, all his content should returned as single literal text
-            if (localNode?.localName != null &&
+            if (localNode != null &&
+                localNode.localName != null &&
                 _literalTags.contains(localNode.localName)) {
               if (closingTag != '/' || tagName != localNode.localName) {
                 literalContent += fullMatch;
@@ -120,14 +122,14 @@ class JSXParser {
               } else {
                 localNode.addNode(JSXNodeText(
                     literalContent.replaceAllMapped(RegExp(r'\\(.)'), (match) {
-                  return match.group(1);
+                  return match.group(1) ?? '';
                 })));
                 literalContent = '';
               }
             }
 
             if (processNode) {
-              JSXNodeElement childElement;
+              JSXNodeElement? childElement;
 
               // Pure text is add first to element
               if (beforeText.isNotEmpty) {
@@ -176,7 +178,7 @@ class JSXParser {
             }
           }
         }
-      } while (localNode != null && fullMatch.isNotEmpty);
+      } while (localNode != null && fullMatch != null && fullMatch.isNotEmpty);
 
       return localNode;
     }
@@ -185,7 +187,7 @@ class JSXParser {
       return null;
     }
 
-    JSXNode bodyNode = JSXNodeElement('body'),
+    JSXNode? bodyNode = JSXNodeElement('body'),
         resultedNode = _processTree(localNode: bodyNode);
 
     // If levels are not correctly closed, the html is invalid

@@ -9,8 +9,8 @@ import 'package:flutter_jsx/src/parser/jsx_node_element.dart';
 /// Converts HTML [String] texts into [RichText] objects
 class JSXConverter {
   final List<String> _allowedElements = [];
-  Map<String, JSXStylesheet> stylesheet;
-  Map<String, Widget> widgets;
+  Map<String, JSXStylesheet> stylesheet = {};
+  Map<String, Widget> widgets = {};
 
   set allowedElements(List<String> list) {
     _allowedElements.clear();
@@ -19,8 +19,8 @@ class JSXConverter {
 
   /// GET RESPECTIVE NODE STYLESHEET
   @visibleForTesting
-  JSXStylesheet getStylesheet(String tag) {
-    JSXStylesheet finderStylesheet;
+  JSXStylesheet? getStylesheet(String tag) {
+    JSXStylesheet? finderStylesheet;
 
     // TODO Match could be improve to use the same CSS Web rules. Now is working only for equal elements
     if (tag != null &&
@@ -59,20 +59,18 @@ class JSXConverter {
 
   /// PARSE HTML CODE INTO RICH TEXT WIDGET
   RichText createElement(
-    {
-      @required String html,
+      {required String html,
       bool renderNewLines = false,
       Map<String, JSXStylesheet> customStylesheet = const {},
       Map<String, Widget> widgets = const {},
-      TextOverflow textOverflow = TextOverflow.clip
-    }) {
+      TextOverflow textOverflow = TextOverflow.clip}) {
     stylesheet = customStylesheet;
     this.widgets = widgets;
 
     String data = replaceBreakLines(html, renderNewLines);
-    JSXNodeElement domBody = extractBodyContent(data);
+    JSXNode domBody = extractBodyContent(data);
 
-    InlineSpan spanBody;
+    InlineSpan? spanBody;
     if (domBody != null) {
       spanBody = parseDomNode(domBody, customStylesheet['*']);
     }
@@ -87,10 +85,10 @@ class JSXConverter {
   ///
   /// PARSE DOM OBJECT AND HIS CHILDREN INTO INLINE SPAN OBJECTS AND ITS DERIVATIVES
   @visibleForTesting
-  InlineSpan parseDomNode(JSXNode node, JSXStylesheet lastStyle) {
+  InlineSpan? parseDomNode(JSXNode? node, JSXStylesheet? lastStyle) {
     if (node == null) return null;
 
-    InlineSpan parentSpan;
+    InlineSpan? parentSpan;
 
     if (node is JSXNodeText) {
       parentSpan = parseDomText(node, lastStyle);
@@ -107,29 +105,29 @@ class JSXConverter {
 
   /// Parse dom text elements into text widgets
   @visibleForTesting
-  InlineSpan parseDomText(JSXNodeText node, JSXStylesheet lastStyle) {
+  InlineSpan? parseDomText(JSXNodeText node, JSXStylesheet? lastStyle) {
     String finalText = node.text;
     if (finalText == null || finalText.trim().isEmpty) return null;
 
-    InlineSpan returnedSpan;
+    InlineSpan? returnedSpan;
 
-    if (node.parentNode is JSXNodeElement) {
+    if (node.parentNode != null && node.parentNode is JSXNodeElement) {
       // Special content characteristics
-      switch (node.parentNode.localName) {
+      switch (node.parentNode!.localName) {
         case "q":
           finalText = '"' + finalText + '"';
           break;
       }
     }
 
-    TextStyle style = lastStyle?.textStyle; // ?? TextStyle();
+    TextStyle? style = lastStyle?.textStyle; // ?? TextStyle();
 
     return returnedSpan ?? TextSpan(text: finalText, style: style);
   }
 
   /// Parse dom elements into container widgets
   @visibleForTesting
-  InlineSpan parseDomElement(JSXNodeElement node, JSXStylesheet lastStyle) {
+  InlineSpan? parseDomElement(JSXNodeElement node, JSXStylesheet? lastStyle) {
     if (_allowedElements.isNotEmpty &&
         node.localName != '*' &&
         !_allowedElements.contains(node.localName)) {
@@ -137,7 +135,7 @@ class JSXConverter {
     }
 
     List<InlineSpan> myChildren = [];
-    JSXStylesheet localStylesheet = getStylesheet(node.localName),
+    JSXStylesheet? localStylesheet = getStylesheet(node.localName),
         // Box properties and positional attributes should not cascade to children
         childStylesheet = localStylesheet == null
             ? lastStyle
@@ -152,7 +150,7 @@ class JSXConverter {
     }
 
     node.nodes.forEach((JSXNode childNode) {
-      InlineSpan child = parseDomNode(childNode, childStylesheet);
+      InlineSpan? child = parseDomNode(childNode, childStylesheet);
       if (child != null) myChildren.add(child);
     });
 
@@ -171,14 +169,14 @@ class JSXConverter {
     }
 
     if (widgets.containsKey(node.localName)) {
-      Widget widget = widgets[node.localName];
+      Widget? widget = widgets[node.localName];
 
       if (widget != null) {
         myChildren = [WidgetSpan(child: widget)]..addAll(myChildren);
       }
     }
 
-    InlineSpan parentSpan;
+    InlineSpan? parentSpan;
     if (myChildren.isNotEmpty) {
       parentSpan = getSpanElement(node, myChildren, localStylesheet);
     }
@@ -189,7 +187,7 @@ class JSXConverter {
   /// APPLIES HTML ATTRIBUTES TO THE SPAN OBJECT
   @visibleForTesting
   JSXStylesheet applyHtmlAttributes(
-      JSXNodeElement element, JSXStylesheet lastStyle) {
+      JSXNodeElement element, JSXStylesheet? lastStyle) {
     JSXStylesheet stylesheet =
         JSXStylesheet().merge(lastStyle, mergeBoxProperties: true);
 
@@ -214,14 +212,14 @@ class JSXConverter {
           break;
 
         case 'width':
-          if (element.attributes['width'].isNotEmpty) {
-            stylesheet.width = double.parse(element.attributes['width']);
+          if (element.attributes['width'] != null) {
+            stylesheet.width = double.parse(element.attributes['width'] ?? '');
           }
           break;
 
         case 'height':
-          if (element.attributes['height'].isNotEmpty) {
-            stylesheet.width = double.parse(element.attributes['height']);
+          if (element.attributes['height'] != null) {
+            stylesheet.width = double.parse(element.attributes['height'] ?? '');
           }
           break;
       }
@@ -232,8 +230,8 @@ class JSXConverter {
 
   /// APPLIES THE STYLESHEET TO THE SPAN OBJECT
   @visibleForTesting
-  InlineSpan getSpanElement(JSXNodeElement element, List<InlineSpan> children,
-      JSXStylesheet lastStyle) {
+  InlineSpan? getSpanElement(JSXNodeElement element, List<InlineSpan> children,
+      JSXStylesheet? lastStyle) {
     if (children == null || children.length == 0) {
       return null;
     }

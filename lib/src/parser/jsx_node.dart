@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 class JSXNode {
-  JSXNode parentNode;
+  JSXNode? parentNode;
 
   @protected
-  String tag;
+  String? tag;
 
-  addNode(JSXNode node) {}
+  addNode(JSXNode? node) {}
   get localName => tag;
 }
